@@ -1,0 +1,262 @@
+package com.project.testing;
+
+import android.Manifest;
+import android.app.Activity;
+import android.app.Service;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Bundle;
+import android.os.IBinder;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentManager;
+
+import com.naver.maps.geometry.LatLng;
+import com.naver.maps.map.LocationTrackingMode;
+import com.naver.maps.map.MapFragment;
+import com.naver.maps.map.MapView;
+import com.naver.maps.map.NaverMap;
+import com.naver.maps.map.OnMapReadyCallback;
+import com.naver.maps.map.overlay.Marker;
+import com.naver.maps.map.util.FusedLocationSource;
+
+public class MapsNaverActivity extends AppCompatActivity implements OnMapReadyCallback {
+
+    private static final String TAG = "MapsNaverActivity";//"MapsNaverActivity";
+
+    private static final int PERMISSION_REQUEST_CODE = 100;
+    private static final String[] PERMISSIONS = {
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+    };
+
+    private FusedLocationSource mLocationSource;
+    private NaverMap mNaverMap;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_maps_naver);
+
+        // 지도 객체 생성
+        FragmentManager fm = getSupportFragmentManager();//getSupportFragmentManager();
+        MapFragment mapFragment = (MapFragment)fm.findFragmentById(R.id.map_view);
+        if (mapFragment == null) {
+            mapFragment = MapFragment.newInstance();
+            fm.beginTransaction().add(R.id.map_view, mapFragment).commit();
+        }
+
+        // getMapAsync를 호출하여 비동기로 onMapReady 콜백 메서드 호출
+        // onMapReady에서 NaverMap 객체를 받음
+        mapFragment.getMapAsync(this);
+
+        // 위치를 반환하는 구현체인 FusedLocationSource 생성
+        mLocationSource = new FusedLocationSource(this, PERMISSION_REQUEST_CODE);
+
+
+    }
+
+
+
+    @Override
+    public void onMapReady(@NonNull NaverMap naverMap) {
+        Log.d( TAG, "onMapReady");
+
+        //Marker[] marker = new Marker[2];
+        //marker.setPosition(new LatLng(37.5670135, 126.9783740));
+        //marker[0].setPosition(new LatLng(37.073345, 126.9783740));
+        //marker[0].setMap(naverMap);
+
+        //marker[1].setPosition(new LatLng(37.073073, 126.9883756));
+        //marker[1].setMap(naverMap);
+
+        //Marker marker = new Marker();
+        //marker.setPosition(new LatLng(37.4626, 126.9383));
+        //marker.setMap(naverMap);
+
+        Marker markerp = new Marker();
+        markerp.setPosition(new LatLng(37.474134, 127.0287133));
+        markerp.setMap(naverMap);
+        //markerp.setPosition(new LatLng(37.4626, 126.9383));
+        //markerp.setMap(naverMap);
+
+        // NaverMap 객체 받아서 NaverMap 객체에 위치 소스 지정
+        mNaverMap = naverMap;
+        mNaverMap.setLocationSource(mLocationSource);
+
+        // 권한확인. 결과는 onRequestPermissionsResult 콜백 매서드 호출
+        ActivityCompat.requestPermissions(this, PERMISSIONS, PERMISSION_REQUEST_CODE);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        // request code와 권한획득 여부 확인
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                mNaverMap.setLocationTrackingMode(LocationTrackingMode.Follow);
+            }
+        }
+    }
+    ///////////////////////////////////////
+
+    public static class GpsTracker extends Service implements LocationListener {
+
+        private final Context mContext;
+        static Location location;
+        static double latitude;
+        static double longitude;
+
+        private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 10;
+        private static final long MIN_TIME_BW_UPDATES = 1000 * 60 * 1;
+        protected LocationManager locationManager;
+
+
+        public GpsTracker(Context context) {
+            this.mContext = context;
+            getLocation();
+        }
+
+
+        public Location getLocation() {
+            try {
+                locationManager = (LocationManager) mContext.getSystemService(LOCATION_SERVICE);
+
+                boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+                boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+                if (!isGPSEnabled && !isNetworkEnabled) {
+
+                } else {
+
+                    int hasFineLocationPermission = ContextCompat.checkSelfPermission(mContext,
+                            Manifest.permission.ACCESS_FINE_LOCATION);
+                    int hasCoarseLocationPermission = ContextCompat.checkSelfPermission(mContext,
+                            Manifest.permission.ACCESS_COARSE_LOCATION);
+
+
+                    if (hasFineLocationPermission == PackageManager.PERMISSION_GRANTED &&
+                            hasCoarseLocationPermission == PackageManager.PERMISSION_GRANTED) {
+
+                        ;
+                    } else
+                        return null;
+
+
+                    if (isNetworkEnabled) {
+
+
+                        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, MIN_TIME_BW_UPDATES, MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
+
+                        if (locationManager != null)
+                        {
+                            location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                            if (location != null)
+                            {
+                                latitude = location.getLatitude();
+                                longitude = location.getLongitude();
+                            }
+                        }
+                    }
+
+
+                    if (isGPSEnabled)
+                    {
+                        if (location == null)
+                        {
+                            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME_BW_UPDATES, MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
+                            if (locationManager != null)
+                            {
+                                location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                                if (location != null)
+                                {
+                                    latitude = location.getLatitude();
+                                    longitude = location.getLongitude();
+
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.d("@@@", ""+e.toString());
+            }
+
+            return location;
+        }
+
+
+
+        public static double getLatitude()
+        {
+            if(location != null)
+            {
+                latitude = location.getLatitude();
+            }
+
+            return latitude;
+        }
+
+        public static double getLongitude()
+        {
+            if(location != null)
+            {
+                longitude = location.getLongitude();
+            }
+
+            return longitude;
+        }
+
+        @Override
+        public void onLocationChanged(Location location)
+        {
+        }
+
+        @Override
+        public void onProviderDisabled(String provider)
+        {
+        }
+
+        @Override
+        public void onProviderEnabled(String provider)
+        {
+        }
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras)
+        {
+        }
+
+        @Override
+        public IBinder onBind(Intent arg0)
+        {
+            return null;
+        }
+
+
+        public void stopUsingGPS()
+        {
+            if(locationManager != null)
+            {
+                locationManager.removeUpdates(GpsTracker.this);
+            }
+        }
+
+    }
+
+
+}
